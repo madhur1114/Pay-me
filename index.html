@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Payment Gateway</title>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            min-height: 700px;
+        }
+
+        /* Step indicators */
+        .step-indicators {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+            gap: 10px;
+        }
+
+        .step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            background: #ffcc00;
+            color: #000;
+            transform: scale(1.1);
+        }
+
+        .step.completed {
+            background: #34a853;
+            color: white;
+        }
+
+        header {
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 32px;
+            background: linear-gradient(to right, #ff9966, #ff5e62);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            margin-bottom: 5px;
+            color: #ddd;
+            font-size: 16px;
+        }
+
+        .amount-selection-container {
+            margin: 20px 0;
+        }
+        
+        .amount-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .amount-option-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid transparent;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .amount-option-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .amount-option-btn.selected {
+            background: #ffcc00;
+            color: #333;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+        }
+
+        .amount-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+        }
+
+        .amount-label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #ffcc00;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .input-group span {
+            padding: 0 15px;
+            background: #ffcc00;
+            color: #333;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        #amount {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            transition: all 0.3s;
+            outline: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+        #amount:focus {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .upi-id-section {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .upi-id {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffcc00;
+            word-break: break-all;
+        }
+
+        .btn {
+            background: #ffcc00;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn:hover {
+            background: #ffdd55;
+            transform: translateY(-2px);
+        }
+
+        .qr-container {
+            margin: 25px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+        }
+
+        .qr-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .qr-container:hover .qr-overlay {
+            opacity: 1;
+        }
+
+        .payment-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .payment-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .payment-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .payment-btn:active {
+            transform: translateY(1px);
+        }
+
+        .gpay {
+            background: linear-gradient(to right, #4285f4, #34a853);
+        }
+
+        .paytm {
+            background: linear-gradient(to right, #20336b, #00b9f1);
+        }
+
+        .fampay {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+        }
+
+        .other-upi {
+            background: linear-gradient(to right, #8e44ad, #3498db);
+        }
+
+        .enter-upi {
+            background: linear-gradient(to right, #e74c3c, #e67e22);
+        }
+
+        .instructions {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+
+        .instructions ol {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .screenshot-btn {
+            background: linear-gradient(to right, #4A00E0, #8E2DE2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .screenshot-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(142, 45, 226, 0.4);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .app-icons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .screenshot-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screenshot-preview {
+            max-width: 90%;
+            max-height: 90%;
+            border: 5px solid white;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.2);
+        }
+
+        .close-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background: #e74c3c;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close-preview:hover {
+            transform: rotate(90deg);
+            background: #c0392b;
+        }
+
+        /* UTR Form */
+        .utr-form {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .utr-label {
+            display: block;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #ffcc00;
+        }
+
+        #utr-number {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .submit-btn {
+            background: linear-gradient(to right, #00c853, #00b248);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Confirmation Overlay */
+        .confirmation-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 20px;
+            z-index: 10;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .confirmation-content {
+            max-width: 400px;
+        }
+
+        .confirmation-icon {
+            font-size: 80px;
+            color: #34a853;
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #ffcc00;
+            font-family: monospace;
+        }
+
+        .payment-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        /* Steps */
+        .step-content {
+            transition: all 0.3s;
+        }
+
+        .step-content.hidden {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            .payment-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .payment-btn {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .step {
+                width: 25px;
+                height: 25px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="payment-gateway">
+        <div class="step-indicators">
+            <div class="step active" id="step1-indicator">1</div>
+            <div class="step" id="step2-indicator">2</div>
+            <div class="step" id="step3-indicator">3</div>
+        </div>
+
+        <header>
+            <h1><i class="fas fa-money-bill-wave"></i> Payment Gateway</h1>
+            <p class="subtitle">Send payments securely using any UPI app</p>
+        </header>
+
+        <div class="step-content" id="step1">
+            <div class="amount-section">
+                <label class="amount-label">Enter Amount (₹)</label>
+                <div class="input-group">
+                    <span>₹</span>
+                    <input type="number" id="amount" placeholder="0.00" min="1" step="1" value="100">
+                </div>
+            </div>
+
+            <div class="amount-selection-container">
+                <label class="amount-label">Or choose a quick amount</label>
+                <div class="amount-options">
+                    <button class="amount-option-btn" data-amount="10" onclick="selectAmount(this)">₹10</button>
+                    <button class="amount-option-btn" data-amount="50" onclick="selectAmount(this)">₹50</button>
+                    <button class="amount-option-btn selected" data-amount="100" onclick="selectAmount(this)">₹100</button>
+                    <button class="amount-option-btn" data-amount="200" onclick="selectAmount(this)">₹200</button>
+                    <button class="amount-option-btn" data-amount="500" onclick="selectAmount(this)">₹500</button>
+                    <button class="amount-option-btn" data-amount="custom" onclick="selectAmount(this)">Custom</button>
+                </div>
+            </div>
+            
+            <div class="upi-id-section">
+                <div class="upi-id">9506700338@fam</div>
+                <button class="btn" onclick="copyUpiId()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+
+            <button class="submit-btn" onclick="showQrPage()">
+                <i class="fas fa-arrow-right"></i> Generate QR Code
+            </button>
+
+            <div class="instructions">
+                <h3><i class="fas fa-info-circle"></i> How to Pay:</h3>
+                <ol>
+                    <li>Enter the payment amount above</li>
+                    <li>Click "Generate QR Code" to proceed</li>
+                    <li>Scan the QR code with any UPI app</li>
+                    <li>After payment, enter your UTR number</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="step-content hidden" id="step2">
+            <div class="amount-section">
+                <div class="amount-label">Payment Amount</div>
+                <div class="input-group" style="background: rgba(255, 255, 255, 0.2); color: white;">
+                    <span style="background: #ffcc00;">₹</span>
+                    <div id="display-amount" style="padding: 15px; font-size: 18px; width: 100%;">100.00</div>
+                </div>
+            </div>
+
+            <div class="qr-container">
+                <div id="qrcode"></div>
+                <div class="qr-overlay">
+                    <i class="fas fa-mobile-alt fa-2x"></i>
+                    <p>Scan with any UPI app</p>
+                </div>
+            </div>
+
+            <div class="app-icons">
+                <div class="app-icon"><i class="fab fa-google-pay"></i></div>
+                <div class="app-icon"><i class="fab fa-amazon-pay"></i></div>
+                <div class="app-icon"><i class="fas fa-mobile-alt"></i></div>
+                <div class="app-icon"><i class="fas fa-wallet"></i></div>
+                <div class="app-icon"><i class="fas fa-qrcode"></i></div>
+            </div>
+
+            <div class="payment-buttons">
+                <button class="payment-btn gpay" onclick="openPaymentApp('gpay')">
+                    <i class="fab fa-google-pay"></i> Google Pay
+                </button>
+                <button class="payment-btn paytm" onclick="openPaymentApp('paytm')">
+                    <i class="fas fa-wallet"></i> Paytm
+                </button>
+                <button class="payment-btn fampay" onclick="openPaymentApp('fampay')">
+                    <i class="fas fa-users"></i> Fam Pay
+                </button>
+                <button class="payment-btn other-upi" onclick="openPaymentApp('other-upi')">
+                    <i class="fas fa-mobile-alt"></i> Other UPI
+                </button>
+                <button class="payment-btn enter-upi" onclick="enterUpiId()">
+                    <i class="fas fa-pen"></i> Enter UPI
+                </button>
+            </div>
+
+            <div class="utr-form">
+                <div class="utr-label">After payment, enter your UTR number</div>
+                <input type="text" id="utr-number" placeholder="Enter 12-digit UTR" maxlength="12">
+                <button class="submit-btn" onclick="submitUtr()">
+                    <i class="fas fa-check"></i> Submit UTR
+                </button>
+            </div>
+        </div>
+
+        <div class="step-content hidden" id="step3">
+            <div class="confirmation-overlay">
+                <div class="confirmation-content">
+                    <i class="fas fa-check-circle confirmation-icon"></i>
+                    <h2>Payment Confirmed!</h2>
+                    <p>Thank you for your payment. We are verifying your transaction.</p>
+
+                    <div class="timer" id="countdown-timer">05:00</div>
+
+                    <p>This process may take up to 5 minutes. Please wait...</p>
+
+                    <div class="payment-status">
+                        <p><i class="fas fa-spinner fa-spin"></i> Verifying transaction: <span id="utr-display">XXXXXXXXXXXX</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>
+                <i class="fas fa-lock"></i> Your payment is secured with UPI technology
+            </div>
+            <button class="screenshot-btn" id="screenshot-btn">
+                <i class="fas fa-camera"></i> Save as Screenshot
+            </button>
+        </div>
+    </div>
+
+    <div class="screenshot-container" id="screenshot-container">
+        <img class="screenshot-preview" id="screenshot-preview" alt="Screenshot">
+        <div class="close-preview" onclick="closePreview()">
+            <i class="fas fa-times"></i>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">UPI ID copied to clipboard!</div>
+
+    <script>
+        let qrCode;
+        let selectedAmount = 100;
+
+        const amountInput = document.getElementById("amount");
+        const amountOptionBtns = document.querySelectorAll('.amount-option-btn');
+        const displayAmount = document.getElementById("display-amount");
+        const toast = document.getElementById("toast");
+        const screenshotBtn = document.getElementById("screenshot-btn");
+        const screenshotContainer = document.getElementById("screenshot-container");
+        const screenshotPreview = document.getElementById("screenshot-preview");
+        const step1 = document.getElementById("step1");
+        const step2 = document.getElementById("step2");
+        const step3 = document.getElementById("step3");
+        const step1Indicator = document.getElementById("step1-indicator");
+        const step2Indicator = document.getElementById("step2-indicator");
+        const step3Indicator = document.getElementById("step3-indicator");
+        const utrInput = document.getElementById("utr-number");
+        const utrDisplay = document.getElementById("utr-display");
+        const countdownTimer = document.getElementById("countdown-timer");
+        const qrContainer = document.getElementById("qrcode");
+
+        function updateStepIndicators(step) {
+            step1Indicator.classList.remove("active", "completed");
+            step2Indicator.classList.remove("active", "completed");
+            step3Indicator.classList.remove("active", "completed");
+
+            if (step === 1) {
+                step1Indicator.classList.add("active");
+            } else if (step === 2) {
+                step1Indicator.classList.add("completed");
+                step2Indicator.classList.add("active");
+            } else if (step === 3) {
+                step1Indicator.classList.add("completed");
+                step2Indicator.classList.add("completed");
+                step3Indicator.classList.add("active");
+            }
+        }
+
+        function selectAmount(button) {
+            // Remove 'selected' class from all buttons
+            amountOptionBtns.forEach(btn => btn.classList.remove('selected'));
+            // Add 'selected' class to the clicked button
+            button.classList.add('selected');
+            
+            const amount = button.dataset.amount;
+            if (amount === 'custom') {
+                amountInput.disabled = false;
+                amountInput.focus();
+                selectedAmount = amountInput.value;
+            } else {
+                amountInput.value = amount;
+                amountInput.disabled = true;
+                selectedAmount = amount;
+            }
+        }
+
+        function showQrPage() {
+            const amount = amountInput.value;
+            if (!amount || amount <= 0) {
+                showToast("Please enter a valid amount");
+                return;
+            }
+
+            displayAmount.textContent = parseFloat(amount).toFixed(2);
+            step1.classList.add("hidden");
+            step2.classList.remove("hidden");
+            updateStepIndicators(2);
+            generateQrCode(amount);
+        }
+
+        function generateQrCode(amount) {
+            qrContainer.innerHTML = "";
+            const upiId = "9506700338@fam";
+            const qrText = `upi://pay?pa=${upiId}&pn=Recipient&am=${amount}&cu=INR`;
+            
+            // Check if qrcode.min.js is loaded
+            if (typeof QRCode === 'undefined') {
+                console.error('qrcode.min.js is not loaded.');
+                showToast("QR code library not loaded.");
+                return;
+            }
+            
+            qrCode = new QRCode(qrContainer, {
+                text: qrText,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function copyUpiId() {
+            const upiId = "9506700338@fam";
+            navigator.clipboard.writeText(upiId)
+                .then(() => showToast("UPI ID copied to clipboard!"))
+                .catch(err => showToast("Failed to copy: " + err));
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 3000);
+        }
+
+        function openPaymentApp(app) {
+            const amount = amountInput.value || '0';
+            const upiId = "9506700338@fam";
+
+            let url;
+            const upiDeepLink = `upi://pay?pa=${upiId}&pn=Recipient&am=${amount}&cu=INR`;
+
+            switch(app) {
+                case 'gpay':
+                    url = `gpay://upi/pay?pa=${upiId}&pn=Recipient&am=${amount}&cu=INR`;
+                    break;
+                case 'paytm':
+                    url = `paytmmp://upi/pay?pa=${upiId}&pn=Recipient&am=${amount}&cu=INR`;
+                    break;
+                case 'fampay':
+                    url = `fampay://pay?pa=${upiId}&pn=Recipient&am=${amount}&cu=INR`;
+                    break;
+                case 'other-upi':
+                    url = upiDeepLink;
+                    break;
+                default:
+                    url = upiDeepLink;
+            }
+
+            window.location.href = url;
+
+            setTimeout(() => {
+                if (!document.hidden) {
+                    showToast(`Could not open ${app}. Please open the app and pay to ${upiId}`);
+                }
+            }, 1500);
+        }
+
+        function enterUpiId() {
+            const userUpi = prompt("Please enter your UPI ID:", "yourname@upi");
+            if (userUpi) {
+                showToast(`UPI ID ${userUpi} entered!`);
+            }
+        }
+
+        async function submitUtr() {
+            const utr = utrInput.value.trim();
+
+            if (!utr || utr.length !== 12) {
+                showToast("Please enter a valid 12-digit UTR number");
+                return;
+            }
+
+            showToast("Submitting UTR for verification...");
+            step2.classList.add("hidden");
+            step3.classList.remove("hidden");
+            updateStepIndicators(3);
+            utrDisplay.textContent = utr;
+
+            // This is a placeholder for a real API call to your backend.
+            // You must build a server-side application to handle this securely.
+            // A simple HTML file cannot do this.
+            try {
+                // Here's where you'd make a real API call:
+                // const response = await fetch('YOUR_BACKEND_API_ENDPOINT_HERE', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ utr: utr, amount: amountInput.value }),
+                // });
+                // const result = await response.json();
+
+                // Simulating a successful API response for demonstration
+                // Replace this with the actual API logic
+                const isUtrValid = true;
+
+                if (isUtrValid) {
+                    showSuccessScreen();
+                } else {
+                    showFailureScreen("UTR could not be verified.");
+                }
+            } catch (error) {
+                console.error('UTR submission error:', error);
+                showFailureScreen("An error occurred during verification.");
+            }
+        }
+
+        function showSuccessScreen() {
+            document.querySelector(".confirmation-content").innerHTML = `
+                <i class="fas fa-check-circle confirmation-icon" style="color: #34a853;"></i>
+                <h2>Payment Verified!</h2>
+                <p>Your transaction has been successfully verified.</p>
+                <div class="payment-status">
+                    <p><i class="fas fa-check-circle"></i> UTR: ${utrInput.value}</p>
+                </div>
+                <button class="submit-btn" onclick="resetFlow()" style="margin-top: 20px;">
+                    <i class="fas fa-redo"></i> Make Another Payment
+                </button>
+            `;
+        }
+
+        function showFailureScreen(message) {
+            document.querySelector(".confirmation-content").innerHTML = `
+                <i class="fas fa-times-circle confirmation-icon" style="color: #e74c3c;"></i>
+                <h2>Verification Failed</h2>
+                <p>${message}</p>
+                <button class="submit-btn" onclick="resetFlow()" style="margin-top: 20px; background: linear-gradient(to right, #e74c3c, #c0392b);">
+                    <i class="fas fa-redo"></i> Try Again
+                </button>
+            `;
+        }
+
+        function resetFlow() {
+            step3.classList.add("hidden");
+            step1.classList.remove("hidden");
+            updateStepIndicators(1);
+            amountInput.value = "100";
+            utrInput.value = "";
+        }
+
+        screenshotBtn.addEventListener('click', function() {
+            showToast("Generating screenshot...");
+            screenshotBtn.style.visibility = 'hidden';
+
+            html2canvas(document.getElementById("payment-gateway"), {
+                scale: 2,
+                backgroundColor: null
+            }).then(canvas => {
+                screenshotPreview.src = canvas.toDataURL('image/png');
+                screenshotContainer.style.display = 'flex';
+                const downloadLink = document.createElement('a');
+                downloadLink.href = canvas.toDataURL('image/png');
+                downloadLink.download = 'payment-details.png';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                screenshotBtn.style.visibility = 'visible';
+            }).catch(err => {
+                console.error('Screenshot error:', err);
+                showToast("Failed to generate screenshot");
+                screenshotBtn.style.visibility = 'visible';
+            });
+        });
+
+        function closePreview() {
+            screenshotContainer.style.display = 'none';
+        }
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+            showToast("For best experience, open this page on your mobile device");
+        }
+
+        updateStepIndicators(1);
+    </script>
+</body>
+</html>
